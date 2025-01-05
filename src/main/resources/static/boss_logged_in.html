@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Dashboard Boss</title>
+
+    <!-- CSS principal -->
+    <link rel="stylesheet" href="styles1.css" />
+
+    <!-- Font Awesome -->
+    <link
+            rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+
+    <!-- Font opțional -->
+    <link
+            href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&display=swap"
+    />
+</head>
+<body>
+
+<header>
+    <nav class="navbar">
+        <div class="brand">
+            <button class="toggle-btn" onclick="toggleSidebar()">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+            <i class="fa-solid fa-bolt"></i> Boss Dashboard
+        </div>
+        <ul>
+            <li><a href="#" onclick="loadPage('dashboard.html')">Home</a></li>
+            <li><a href="#" onclick="loadPage('my_account.html')">My Account</a></li>
+            <li><a href="/api/logout">Logout</a></li>
+        </ul>
+    </nav>
+</header>
+
+<div class="wrapper">
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+        <h2>Menu</h2>
+        <ul>
+            <li><a href="#" onclick="loadPage('managers')">Managers</a></li>
+            <li><a href="#" onclick="loadPage('employees.html')">Employees</a></li>
+            <li><a href="#" onclick="loadPage('create_users.html')">Create Users</a></li>
+            <li><a href="#" onclick="loadPage('boss_tasks.html')">Your Tasks</a></li>
+            <li><a href="#" onclick="loadPage('company_info.html')">Company Info</a></li>
+        </ul>
+    </aside>
+
+
+
+    <!-- CONȚINUT PRINCIPAL -->
+    <main class="main-content">
+        <!-- Default content for photo and company name -->
+        <section id="default-section" class="hero">
+            <h1 class="company-name">Compania: Nume necunoscut</h1>
+        </section>
+
+        <!-- iFrame pentru pagini generale -->
+        <iframe id="content-frame" src="dashboard.html" frameborder="0" style="width:100%; height:calc(100vh - 60px); display:none;"></iframe>
+
+        <!-- Dynamic Managers List -->
+        <section id="managers-list" style="display:none; padding: 20px;">
+            <h2>Managers</h2>
+            <div id="managers-container" class="managers-grid">
+                <!-- Cardurile vor fi adăugate dinamic aici -->
+            </div>
+        </section>
+
+        <!-- iFrame pentru manageri -->
+        <!-- Adaugă un buton Înapoi deasupra iframe-ului -->
+        <button id="back-button" style="display: none; margin: 20px;" onclick="goBackToManagers()">Managers</button>
+
+        <!-- iFrame pentru manageri -->
+        <iframe id="manager-content-frame" src="" frameborder="0" style="width:100%; height:calc(100vh - 60px); display:none;"></iframe>
+    </main>
+</div>
+
+<!-- JavaScript -->
+<script>
+    function toggleSidebar() {
+        const sidebar = document.getElementById("sidebar");
+        const mainContent = document.querySelector(".main-content");
+
+        sidebar.classList.toggle("collapsed");
+        mainContent.classList.toggle("collapsed");
+    }
+
+    function loadPage(page) {
+        const defaultSection = document.getElementById("default-section");
+        const contentFrame = document.getElementById("content-frame");
+        const managerContentFrame = document.getElementById("manager-content-frame");
+        const managersList = document.getElementById("managers-list");
+
+        if (page === 'dashboard.html') {
+            // Afișează dashboard-ul
+            defaultSection.style.display = 'block';
+            contentFrame.style.display = 'none';
+            managerContentFrame.style.display = 'none';
+            managersList.style.display = 'none';
+        } else if (page === 'managers') {
+            // Afișează lista de manageri
+            defaultSection.style.display = 'none';
+            contentFrame.style.display = 'none';
+            managerContentFrame.style.display = 'none';
+            managersList.style.display = 'block';
+
+            fetch('/api/managers')
+                .then(response => response.json())
+                .then(managers => {
+                    console.log("Manageri primiți de la API:", managers);
+                    const container = document.getElementById('managers-container');
+                    container.innerHTML = '';
+
+                    managers.forEach(manager => {
+                        const card = document.createElement('div');
+                        card.className = 'manager-card';
+                        card.addEventListener('click', () => {
+                            loadManagerPage(manager.id);
+                        });
+
+                        card.innerHTML = `
+                        <strong>Name:</strong> ${manager.fullname}<br>
+                        <strong>Email:</strong> ${manager.email}<br>
+                        <strong>Tasks Assigned:</strong> ${manager.tasksNum}
+                    `;
+
+                        container.appendChild(card);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching managers:', error);
+                    document.getElementById('managers-container').innerHTML =
+                        '<p style="color: red;">Failed to load managers.</p>';
+                });
+        } else {
+            // Încarcă orice altă pagină în iframe
+            defaultSection.style.display = 'none';
+            managersList.style.display = 'none';
+            managerContentFrame.style.display = 'none';
+            contentFrame.style.display = 'block';
+
+            // Setează src-ul pentru iframe
+            contentFrame.src = page;
+        }
+    }
+
+
+    function loadManagerPage(managerId) {
+        // Redirecționează către managers.html cu managerId ca parametru
+        window.location.href = `/managers.html?id=${managerId}`;
+    }
+
+
+    function goBackToManagers() {
+        const managerContentFrame = document.getElementById('manager-content-frame');
+        const backButton = document.getElementById('back-button');
+        const managersList = document.getElementById('managers-list');
+
+        // Ascunde iframe-ul și butonul Înapoi
+        managerContentFrame.style.display = 'none';
+        backButton.style.display = 'none';
+
+        // Afișează lista managerilor
+        managersList.style.display = 'block';
+    }
+
+
+    // Obține email-ul utilizatorului din localStorage
+    const userEmail = localStorage.getItem('email');
+
+    if (userEmail) {
+        fetch(`/api/currentUser?email=${userEmail}`)
+            .then(response => response.json())
+            .then(user => {
+                if (user.userType === "boss" && user.companyName) {
+                    document.querySelector('.company-name').textContent = `Compania: ${user.companyName}`;
+                } else {
+                    document.querySelector('.company-name').textContent = `Compania: Nume necunoscut`;
+                }
+            })
+            .catch(error => {
+                console.error('Eroare la obținerea datelor utilizatorului logat:', error);
+                document.querySelector('.company-name').textContent = `Compania: Eroare la afișare`;
+            });
+    } else {
+        console.error('Email-ul utilizatorului nu a fost găsit în localStorage.');
+        document.querySelector('.company-name').textContent = `Compania: Eroare la afișare`;
+    }
+</script>
+
+</body>
+</html>

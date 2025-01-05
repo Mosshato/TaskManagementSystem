@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Managers</title>
+
+    <!-- CSS principal -->
+    <link rel="stylesheet" href="styles1.css">
+
+    <!-- Font Awesome -->
+    <link
+            rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+</head>
+<body>
+<div class="wrapper">
+    <!-- HEADER -->
+    <header>
+        <nav class="navbar">
+            <div class="brand">
+                <button class="toggle-btn" onclick="toggleSidebar()">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <i class="fa-solid fa-bolt"></i> Manager Tasks
+            </div>
+            <ul>
+                <li><a href="#" onclick="loadPage('dashboard.html')">Home</a></li>
+                <li><a href="#" onclick="loadPage('my_account.html')">My Account</a></li>
+                <li><a href="/api/logout">Logout</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+        <h2>Menu</h2>
+        <ul>
+            <li><a href="#" onclick="loadPage('managers')">Managers</a></li>
+            <li><a href="#" onclick="loadPage('employees.html')">Employees</a></li>
+            <li><a href="#" onclick="loadPage('create_users.html')">Create Users</a></li>
+            <li><a href="#" onclick="loadPage('boss_tasks.html')">Your Tasks</a></li>
+            <li><a href="#" onclick="loadPage('company_info.html')">Company Info</a></li>
+        </ul>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+        <section id="task-list-section" style="padding: 20px;">
+            <h2>Task-uri Manager</h2>
+            <div id="task-container">
+                <!-- Task-urile vor fi afișate aici -->
+            </div>
+        </section>
+
+        <button id="back-button" onclick="goBack()" style="margin: 20px;">Înapoi la Manageri</button>
+        <button id="process-button" disabled style="margin: 20px;">Prelucrează Task</button>
+    </main>
+</div>
+
+<!-- JavaScript -->
+<script>
+    let selectedTaskId = null;
+
+    function toggleSidebar() {
+        const sidebar = document.getElementById("sidebar");
+        const mainContent = document.querySelector(".main-content");
+
+        sidebar.classList.toggle("collapsed");
+        mainContent.classList.toggle("collapsed");
+    }
+
+    function loadPage(page) {
+        const defaultSection = document.getElementById("default-section");
+        const contentFrame = document.getElementById("content-frame");
+        const managerContentFrame = document.getElementById("manager-content-frame");
+        const managersList = document.getElementById("managers-list");
+
+        if (page === 'dashboard.html') {
+            // Afișează dashboard-ul
+            defaultSection.style.display = 'block';
+            contentFrame.style.display = 'none';
+            managerContentFrame.style.display = 'none';
+            managersList.style.display = 'none';
+        } else if (page === 'managers') {
+            // Afișează lista de manageri
+            defaultSection.style.display = 'none';
+            contentFrame.style.display = 'none';
+            managerContentFrame.style.display = 'none';
+            managersList.style.display = 'block';
+
+            fetch('/api/managers')
+                .then(response => response.json())
+                .then(managers => {
+                    console.log("Manageri primiți de la API:", managers);
+                    const container = document.getElementById('managers-container');
+                    container.innerHTML = '';
+
+                    managers.forEach(manager => {
+                        const card = document.createElement('div');
+                        card.className = 'manager-card';
+                        card.addEventListener('click', () => {
+                            loadManagerPage(manager.id);
+                        });
+
+                        card.innerHTML = `
+                        <strong>Name:</strong> ${manager.fullname}<br>
+                        <strong>Email:</strong> ${manager.email}<br>
+                        <strong>Tasks Assigned:</strong> ${manager.tasksNum}
+                    `;
+
+                        container.appendChild(card);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching managers:', error);
+                    document.getElementById('managers-container').innerHTML =
+                        '<p style="color: red;">Failed to load managers.</p>';
+                });
+        } else {
+            // Încarcă orice altă pagină în iframe
+            defaultSection.style.display = 'none';
+            managersList.style.display = 'none';
+            managerContentFrame.style.display = 'none';
+            contentFrame.style.display = 'block';
+
+            // Setează src-ul pentru iframe
+            contentFrame.src = page;
+        }
+    }
+
+    function fetchTasks(managerId) {
+        fetch(`/api/tasks?managerId=${managerId}`)
+            .then(response => response.json())
+            .then(tasks => {
+                console.log("Răspunsul complet primit de la API:", tasks);
+                const container = document.getElementById('task-container');
+                container.innerHTML = '';
+
+                if (!Array.isArray(tasks)) {
+                    container.innerHTML = '<p style="color: red;">Răspuns invalid de la server.</p>';
+                    return;
+                }
+
+                if (tasks.length === 0) {
+                    container.innerHTML = '<p>Nu există task-uri pentru acest manager.</p>';
+                    return;
+                }
+
+                tasks.forEach(task => {
+                    const taskItem = document.createElement('div');
+                    taskItem.className = 'task-item';
+                    taskItem.style.border = '1px solid #ddd';
+                    taskItem.style.padding = '10px';
+                    taskItem.style.marginBottom = '10px';
+                    taskItem.style.borderRadius = '5px';
+                    taskItem.style.cursor = 'pointer';
+
+                    taskItem.innerHTML = `
+                        <p><strong>Descriere:</strong> ${task.description}</p>
+                        <p><strong>Data Creare:</strong> ${new Date(task.createdAt).toLocaleString()}</p>
+                        <p><strong>Data Limită:</strong> ${new Date(task.dueDate).toLocaleString()}</p>
+                    `;
+
+                    taskItem.addEventListener('click', () => {
+                        if (taskItem.classList.contains('selected')) {
+                            taskItem.classList.remove('selected');
+                            selectedTaskId = null;
+                            document.getElementById('process-button').disabled = true;
+                        } else {
+                            const previouslySelected = document.querySelector('.task-item.selected');
+                            if (previouslySelected) {
+                                previouslySelected.classList.remove('selected');
+                            }
+                            taskItem.classList.add('selected');
+                            selectedTaskId = task.id;
+                            document.getElementById('process-button').disabled = false;
+                        }
+                    });
+
+                    container.appendChild(taskItem);
+                });
+            })
+            .catch(error => {
+                console.error('Eroare la obținerea task-urilor:', error);
+                document.getElementById('task-container').innerHTML =
+                    '<p style="color: red;">Eroare la încărcarea task-urilor.</p>';
+            });
+    }
+
+    document.getElementById('process-button').addEventListener('click', () => {
+        if (selectedTaskId) {
+            console.log(`Se prelucrează task-ul cu ID: ${selectedTaskId}`);
+        } else {
+            console.log('Niciun task selectat!');
+        }
+    });
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const managerId = urlParams.get('id');
+
+    if (!managerId || managerId === "null") {
+        document.getElementById('task-container').innerHTML =
+            '<p style="color: red;">ID-ul managerului nu este specificat sau este invalid.</p>';
+    } else {
+        fetchTasks(managerId);
+    }
+
+    function goBack() {
+        window.location.href = 'boss_logged_in.html';
+    }
+</script>
+</body>
+</html>
