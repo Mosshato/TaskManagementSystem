@@ -56,6 +56,8 @@
 
         <button id="back-button" onclick="goBack()" style="margin: 20px;">Înapoi la Manageri</button>
         <button id="process-button" disabled style="margin: 20px;">Prelucrează Task</button>
+        <button id="delete-task-button" style="margin: 20px;">Sterge task</button>
+
     </main>
 </div>
 
@@ -79,23 +81,23 @@
 
         if (page === 'dashboard.html') {
             // Afișează dashboard-ul
-            defaultSection.style.display = 'block';
-            contentFrame.style.display = 'none';
-            managerContentFrame.style.display = 'none';
-            managersList.style.display = 'none';
+            if (defaultSection) defaultSection.style.display = 'block';
+            if (contentFrame) contentFrame.style.display = 'none';
+            if (managerContentFrame) managerContentFrame.style.display = 'none';
+            if (managersList) managersList.style.display = 'none';
         } else if (page === 'managers') {
             // Afișează lista de manageri
-            defaultSection.style.display = 'none';
-            contentFrame.style.display = 'none';
-            managerContentFrame.style.display = 'none';
-            managersList.style.display = 'block';
+            if (defaultSection) defaultSection.style.display = 'none';
+            if (contentFrame) contentFrame.style.display = 'none';
+            if (managerContentFrame) managerContentFrame.style.display = 'none';
+            if (managersList) managersList.style.display = 'block';
 
             fetch('/api/managers')
                 .then(response => response.json())
                 .then(managers => {
                     console.log("Manageri primiți de la API:", managers);
                     const container = document.getElementById('managers-container');
-                    container.innerHTML = '';
+                    if (container) container.innerHTML = '';
 
                     managers.forEach(manager => {
                         const card = document.createElement('div');
@@ -110,25 +112,39 @@
                         <strong>Tasks Assigned:</strong> ${manager.tasksNum}
                     `;
 
-                        container.appendChild(card);
+                        if (container) container.appendChild(card);
                     });
                 })
                 .catch(error => {
                     console.error('Error fetching managers:', error);
-                    document.getElementById('managers-container').innerHTML =
-                        '<p style="color: red;">Failed to load managers.</p>';
+                    if (document.getElementById('managers-container')) {
+                        document.getElementById('managers-container').innerHTML =
+                            '<p style="color: red;">Failed to load managers.</p>';
+                    }
                 });
+        } else if (page === 'employees.html') {
+            // Setează src-ul pentru iframe la employees.html
+            if (contentFrame) {
+                contentFrame.src = 'employees.html';
+                contentFrame.style.display = 'block';
+            }
+            // Ascunde celelalte secțiuni
+            if (defaultSection) defaultSection.style.display = 'none';
+            if (managersList) managersList.style.display = 'none';
+            if (managerContentFrame) managerContentFrame.style.display = 'none';
         } else {
-            // Încarcă orice altă pagină în iframe
-            defaultSection.style.display = 'none';
-            managersList.style.display = 'none';
-            managerContentFrame.style.display = 'none';
-            contentFrame.style.display = 'block';
+            // Setează src-ul pentru iframe pentru alte pagini
+            if (contentFrame) contentFrame.src = page;
 
-            // Setează src-ul pentru iframe
-            contentFrame.src = page;
+            // Încarcă orice altă pagină în iframe
+            if (defaultSection) defaultSection.style.display = 'none';
+            if (managersList) managersList.style.display = 'none';
+            if (managerContentFrame) managerContentFrame.style.display = 'none';
+            if (contentFrame) contentFrame.style.display = 'block';
         }
     }
+
+
 
     function fetchTasks(managerId) {
         fetch(`/api/tasks?managerId=${managerId}`)
