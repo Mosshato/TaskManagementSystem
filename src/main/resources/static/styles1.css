@@ -136,8 +136,10 @@ body {
 
 /* HERO (imagine full ecran - sidebar) */
 .hero {
-    margin-left: 220px; /* Începe după sidebar */
-    width: calc(100% - 220px); /* Ajustează lățimea */
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    /* Elimină margin-left și width */
     min-height: calc(100vh - 60px); /* Înălțimea totală minus navbar */
     background: url("1c0708a88937e5970cf48c40e7db6a7f.jpg") no-repeat center center;
     background-size: cover;
@@ -147,6 +149,7 @@ body {
     justify-content: center;
     padding: 20px;
 }
+
 
 /* Ajustare pentru sidebar colapsat */
 .hero.collapsed {

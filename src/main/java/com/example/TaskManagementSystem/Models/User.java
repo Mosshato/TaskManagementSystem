@@ -11,12 +11,23 @@ public class User {
 
     private int tasksNum;
 
+    private String passwordSalt; // Adaugă acest câmp
+
+
     public int getTasksNum() {
         return tasksNum;
     }
 
     public void setTasksNum(int tasksNum) {
         this.tasksNum = tasksNum;
+    }
+
+    public String getPasswordSalt() {
+        return passwordSalt;
+    }
+
+    public void setPasswordSalt(String passwordSalt) {
+        this.passwordSalt = passwordSalt;
     }
 
     private Long id; // Auto-generated ID
@@ -62,7 +73,7 @@ public class User {
         this.id = id;
     }
 
-    public String getFullname() {
+    public String getFullName() {
         return fullname;
     }
 
@@ -125,4 +136,5 @@ public class User {
                 ", userType='" + userType + '\'' +
                 '}';
     }
+
 }

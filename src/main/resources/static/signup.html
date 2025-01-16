@@ -134,16 +134,19 @@
             const result = await response.json();
 
             if (response.ok) {
+                const resultData = result.data;
+                localStorage.setItem("email", resultData.email);
+                localStorage.setItem("role", resultData.role);
                 displayMessage(result.message || 'Sign-up successful! Redirecting...', false);
-
+                window.location.href = `/dashboard.html?role=${encodeURIComponent(data.role)}`;
                 // Redirect user based on their role
-                if (data.role === 'boss') {
-                    window.location.href = '/boss_logged_in.html';
+                /*if (data.role === 'boss') {
+                    window.location.href = '/dashboard.html';
                 } else if (data.role === 'manager') {
-                    window.location.href = '/manager_logged_in.html';
+                    window.location.href = '/dashboard.html';
                 } else if (data.role === 'employee') {
-                    window.location.href = '/employee_logged_in.html';
-                }
+                    window.location.href = '/dashboard.html';
+                }*/
             } else {
                 displayMessage(result.message || 'Error during registration.', true);
             }

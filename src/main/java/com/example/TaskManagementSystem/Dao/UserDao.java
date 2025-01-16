@@ -38,7 +38,7 @@ public class UserDao {
         try (Connection connection = DBConnection.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(INSERT_USER_SQL)) {
 
-            preparedStatement.setString(1, user.getFullname());
+            preparedStatement.setString(1, user.getFullName());
             preparedStatement.setString(2, user.getEmail());
             preparedStatement.setString(3, hashPassword(user.getPassword())); // Hash the password
             preparedStatement.setString(4, user.getUserType());
@@ -126,37 +126,31 @@ public class UserDao {
      * @return The User object if found, or null if not found.
      */
     public User findUserByEmail(String email) {
-        String query = """
-        SELECT u.*, c.COMPANY_NAME 
-        FROM users u
-        LEFT JOIN companies c ON u.COMPANY_ID = c.ID
-        WHERE u.EMAIL = ?
-    """;
-
+        String query = "SELECT ID, FULL_NAME, EMAIL, PASSWORD_HASH, PASSWORD_SALT, USER_TYPE, COMPANY_ID, TASKS_NUM FROM C##TEST1.USERS WHERE EMAIL = ?";
         try (Connection connection = DBConnection.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(query)) {
 
             preparedStatement.setString(1, email);
-            try (ResultSet rs = preparedStatement.executeQuery()) {
-                if (rs.next()) {
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                if (resultSet.next()) {
                     User user = new User();
-                    user.setId(rs.getLong("ID"));
-                    user.setFullname(rs.getString("FULL_NAME"));
-                    user.setEmail(rs.getString("EMAIL"));
-                    user.setPassword(rs.getString("PASSWORD_HASH"));
-                    user.setUserType(rs.getString("USER_TYPE"));
-                    user.setCompanyId(rs.getLong("COMPANY_ID"));
-
-                    // Adaugăm numele companiei
-                    user.setCompanyName(rs.getString("COMPANY_NAME"));
+                    user.setId(resultSet.getLong("ID"));
+                    user.setFullname(resultSet.getString("FULL_NAME"));
+                    user.setEmail(resultSet.getString("EMAIL"));
+                    user.setPassword(resultSet.getString("PASSWORD_HASH")); // Hash-ul parolei
+                    user.setPasswordSalt(resultSet.getString("PASSWORD_SALT")); // Salt-ul parolei
+                    user.setUserType(resultSet.getString("USER_TYPE"));
+                    user.setCompanyId(resultSet.getLong("COMPANY_ID"));
+                    user.setTasksNum(resultSet.getInt("TASKS_NUM"));
                     return user;
                 }
             }
         } catch (SQLException e) {
-            logger.error("Error finding user by email", e);
+            logger.error("Error finding user by email: " + email, e);
         }
         return null;
     }
+
 
     /**
      * Hashes a password using SHA-256.
@@ -164,7 +158,7 @@ public class UserDao {
      * @param password The plain text password.
      * @return The hashed password as a hexadecimal string.
      */
-    private String hashPassword(String password) {
+    public String hashPassword(String password) {
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
             byte[] hash = md.digest(password.getBytes());
@@ -181,39 +175,234 @@ public class UserDao {
         }
     }
 
-    public List<User> findUsersByType(String userType) {
-        List<User> users = new ArrayList<>();
-        String query = """
-        SELECT u.ID, u.FULL_NAME, u.EMAIL, u.USER_TYPE,
+    public List<User> findManagersByBoss(String bossEmail) {
+        List<User> managers = new ArrayList<>();
+        if (bossEmail == null || bossEmail.isEmpty()) {
+            logger.error("Provided boss email is null or empty.");
+            return managers;
+        }
+
+        String getBossCompanyQuery = "SELECT COMPANY_ID FROM USERS WHERE LOWER(EMAIL) = ? AND USER_TYPE = 'boss'";
+        String getManagersQuery = """
+        SELECT u.ID, u.FULL_NAME, u.EMAIL, u.USER_TYPE, u.COMPANY_ID,
                COUNT(t.ID) AS TASKS_NUM
-        FROM users u
-        LEFT JOIN tasks t ON u.ID = t.ASSIGNED_USER_ID
-        WHERE u.USER_TYPE = ?
-        GROUP BY u.ID, u.FULL_NAME, u.EMAIL, u.USER_TYPE
+        FROM USERS u
+        LEFT JOIN TASKS t ON u.ID = t.ASSIGNED_USER_ID
+        WHERE u.USER_TYPE = 'manager' AND u.COMPANY_ID = ?
+        GROUP BY u.ID, u.FULL_NAME, u.EMAIL, u.USER_TYPE, u.COMPANY_ID
     """;
+
+        try (Connection connection = DBConnection.getConnection()) {
+            connection.setAutoCommit(true); // Ensure changes are visible
+            Long companyId = null;
+
+            try (PreparedStatement bossStmt = connection.prepareStatement(getBossCompanyQuery)) {
+                bossStmt.setString(1, bossEmail.toLowerCase());
+                try (ResultSet rs = bossStmt.executeQuery()) {
+                    if (rs.next()) {
+                        companyId = rs.getLong("COMPANY_ID");
+                    } else {
+                        logger.warn("Boss with email {} not found.", bossEmail);
+                        return managers; // Early return if no boss found
+                    }
+                }
+            }
+
+        try (PreparedStatement managersStmt = connection.prepareStatement(getManagersQuery)) {
+            managersStmt.setLong(1, companyId);
+            try (ResultSet rsManagers = managersStmt.executeQuery()) {
+                while (rsManagers.next()) {
+                    User manager = new User();
+                    manager.setId(rsManagers.getLong("ID"));
+                    manager.setFullname(rsManagers.getString("FULL_NAME"));
+                    manager.setEmail(rsManagers.getString("EMAIL"));
+                    manager.setUserType(rsManagers.getString("USER_TYPE"));
+                    manager.setCompanyId(rsManagers.getLong("COMPANY_ID"));
+                    manager.setTasksNum(rsManagers.getInt("TASKS_NUM")); // Default safe handling
+                    managers.add(manager);
+                }
+            }
+        }
+
+        } catch (SQLException e) {
+            logger.error("Error fetching managers for boss with email {}: {}", bossEmail, e.getMessage(), e);
+        }
+
+        logger.info("Managers reporting to boss {}: {}", bossEmail, managers);
+        return managers;
+    }
+
+    public String hashPasswordWithSalt(String password, String salt) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            // Combinăm parola cu salt-ul
+            String saltedPassword = salt + password;
+            byte[] hash = md.digest(saltedPassword.getBytes());
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) hexString.append('0');
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (NoSuchAlgorithmException e) {
+            logger.error("Error hashing password", e);
+            throw new RuntimeException("Error hashing password", e);
+        }
+    }
+
+
+    public List<User> findEmployeesByBoss(String bossEmail) {
+        List<User> employees = new ArrayList<>();
+        if (bossEmail == null || bossEmail.isEmpty()) {
+            logger.error("Provided boss email is null or empty.");
+            return employees;
+        }
+
+        String getBossCompanyQuery = "SELECT COMPANY_ID FROM USERS WHERE LOWER(EMAIL) = ? AND USER_TYPE = 'boss'";
+        String getEmployeesQuery = """
+        SELECT u.ID, u.FULL_NAME, u.EMAIL, u.USER_TYPE, u.COMPANY_ID,
+               COUNT(t.ID) AS TASKS_NUM
+        FROM USERS u
+        LEFT JOIN TASKS t ON u.ID = t.ASSIGNED_USER_ID
+        WHERE u.USER_TYPE = 'employee' AND u.COMPANY_ID = ?
+        GROUP BY u.ID, u.FULL_NAME, u.EMAIL, u.USER_TYPE, u.COMPANY_ID
+    """;
+
+        try (Connection connection = DBConnection.getConnection()) {
+            connection.setAutoCommit(true); // Ensure changes are visible
+            Long companyId = null;
+
+            // Obține ID-ul companiei șefului
+            try (PreparedStatement bossStmt = connection.prepareStatement(getBossCompanyQuery)) {
+                bossStmt.setString(1, bossEmail.toLowerCase());
+                try (ResultSet rs = bossStmt.executeQuery()) {
+                    if (rs.next()) {
+                        companyId = rs.getLong("COMPANY_ID");
+                    } else {
+                        logger.warn("Boss with email {} not found.", bossEmail);
+                        return employees; // Early return dacă șeful nu este găsit
+                    }
+                }
+            }
+
+            // Obține lista de angajați
+            try (PreparedStatement employeesStmt = connection.prepareStatement(getEmployeesQuery)) {
+                employeesStmt.setLong(1, companyId);
+                try (ResultSet rsEmployees = employeesStmt.executeQuery()) {
+                    while (rsEmployees.next()) {
+                        User employee = new User();
+                        employee.setId(rsEmployees.getLong("ID"));
+                        employee.setFullname(rsEmployees.getString("FULL_NAME"));
+                        employee.setEmail(rsEmployees.getString("EMAIL"));
+                        employee.setUserType(rsEmployees.getString("USER_TYPE"));
+                        employee.setCompanyId(rsEmployees.getLong("COMPANY_ID"));
+                        employee.setTasksNum(rsEmployees.getInt("TASKS_NUM")); // Default safe handling
+                        employees.add(employee);
+                    }
+                }
+            }
+
+        } catch (SQLException e) {
+            logger.error("Error fetching employees for boss with email {}: {}", bossEmail, e.getMessage(), e);
+        }
+
+        logger.info("Employees reporting to boss {}: {}", bossEmail, employees);
+        return employees;
+    }
+
+    public boolean doesEmailExist(String email) {
+        String query = "SELECT COUNT(*) FROM C##TEST1.USERS WHERE EMAIL = ?";
+        try (Connection connection = DBConnection.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+
+            preparedStatement.setString(1, email);
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                if (resultSet.next()) {
+                    return resultSet.getInt(1) > 0; // Return true dacă email-ul există
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("Error checking if email exists: " + email, e);
+        }
+        return false; // Returnăm false dacă ceva nu merge bine
+    }
+
+    public boolean createUser(User user) {
+        String query = "INSERT INTO C##TEST1.USERS (FULL_NAME, EMAIL, PASSWORD_HASH, PASSWORD_SALT, USER_TYPE, COMPANY_ID, TASKS_NUM) " +
+                "VALUES (?, ?, ?, ?, ?, ?, 0)";
 
         try (Connection connection = DBConnection.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(query)) {
 
-            preparedStatement.setString(1, userType);
+            // Setează valorile
+            preparedStatement.setString(1, user.getFullName());
+            preparedStatement.setString(2, user.getEmail());
+            preparedStatement.setString(3, hashPasswordWithSalt(user.getPassword(), user.getPasswordSalt())); // Hash-ul parolei
+            preparedStatement.setString(4, user.getPasswordSalt());
+            preparedStatement.setString(5, user.getUserType());
+            preparedStatement.setLong(6, user.getCompanyId()); // ID-ul companiei șefului logat
 
-            try (ResultSet rs = preparedStatement.executeQuery()) {
-                while (rs.next()) {
-                    User user = new User();
-                    user.setId(rs.getLong("ID"));
-                    user.setFullname(rs.getString("FULL_NAME"));
-                    user.setEmail(rs.getString("EMAIL"));
-                    user.setUserType(rs.getString("USER_TYPE"));
-                    user.setTasksNum(rs.getInt("TASKS_NUM")); // Setează numărul de task-uri
-                    users.add(user);
-                }
+            int rowsAffected = preparedStatement.executeUpdate();
+            return rowsAffected > 0; // Returnăm true dacă utilizatorul a fost inserat
+        } catch (SQLException e) {
+            logger.error("Error creating user: " + e.getMessage(), e);
+            return false;
+        }
+    }
+
+    public Long getCompanyIdByEmail(String email) {
+        String sql = "SELECT COMPANY_ID FROM USERS WHERE EMAIL = ?";
+        try (Connection connection = DBConnection.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, email);
+            ResultSet resultSet = statement.executeQuery();
+
+            if (resultSet.next()) {
+                return resultSet.getLong("COMPANY_ID");
             }
         } catch (SQLException e) {
-            logger.error("Error fetching users by type", e);
+            e.printStackTrace();
         }
+        return null; // Return null dacă email-ul nu este găsit
+    }
 
-        logger.info("Manageri returnați cu numărul de task-uri: {}", users);
-        return users;
+    public String getCompanyCodeByEmail(String email) {
+        String sql = "SELECT c.COMPANY_CODE " +
+                "FROM USERS u " +
+                "JOIN COMPANIES c ON u.COMPANY_ID = c.ID " +
+                "WHERE u.EMAIL = ?";
+        try (Connection connection = DBConnection.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, email);
+            ResultSet resultSet = statement.executeQuery();
+
+            if (resultSet.next()) {
+                return resultSet.getString("COMPANY_CODE");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null; // Return null dacă email-ul nu este găsit
+    }
+
+    public String getCompanyNameByEmail(String email) {
+        String sql = "SELECT c.COMPANY_NAME " +
+                "FROM USERS u " +
+                "JOIN COMPANIES c ON u.COMPANY_ID = c.ID " +
+                "WHERE u.EMAIL = ?";
+        try (Connection connection = DBConnection.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, email);
+            ResultSet resultSet = statement.executeQuery();
+
+            if (resultSet.next()) {
+                return resultSet.getString("COMPANY_NAME");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null; // Return null dacă email-ul nu este găsit sau compania nu există
     }
 
 

@@ -30,7 +30,6 @@
         formData.forEach((value, key) => {
             data[key] = value;
         });
-
         const loginMessage = document.getElementById('login-message');
         loginMessage.textContent = '';
 
@@ -42,15 +41,14 @@
             });
 
             const result = await response.json();
-
             if (response.ok) {
+                const resultData = result.data;
                 loginMessage.textContent = result.message;
                 loginMessage.style.color = 'green';
-
-                // Salvează email-ul utilizatorului în localStorage
-                localStorage.setItem('email', data.email);
-
-                // Redirecționează utilizatorul în funcție de tip
+                localStorage.setItem('email', resultData.email);
+                localStorage.setItem('role', resultData.role);
+                window.location.href = `/dashboard.html?role=${encodeURIComponent(resultData.role)}`;
+                /*// Redirecționează utilizatorul în funcție de tip
                 if (result.userType === 'boss') {
                     window.location.href = '/boss_logged_in.html';
                 } else if (result.userType === 'manager') {
@@ -59,7 +57,7 @@
                     window.location.href = '/employee_logged_in.html';
                 } else {
                     loginMessage.textContent = 'Tipul utilizatorului este necunoscut.';
-                }
+                }*/
             } else {
                 loginMessage.textContent = result.message || 'Date de logare incorecte.';
                 loginMessage.style.color = 'red';

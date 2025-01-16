@@ -9,7 +9,16 @@ public class Task {
     private Timestamp createdAt;
     private Timestamp dueDate;
     private Long assignedUserId;
+    private String bossEmail; // Adăugăm email-ul pentru a căuta AssignedUserId
 
+    // Getters și Setters
+    public String getEmail() {
+        return bossEmail;
+    }
+
+    public void setEmail(String email) {
+        this.bossEmail = email;
+    }
     // Getters and setters
     public Long getId() {
         return id;
