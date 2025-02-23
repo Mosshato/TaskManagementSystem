@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Sign Up - My Application</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="background"></div> <!-- Div for background -->
+<div class="signup-container">
+    <!-- Text above the fields -->
+    <h2 id="signup-role-text">Sign Up</h2>
+    <p id="role-specific-text"></p> <!-- Role-specific text -->
+
+    <form id="signup-form">
+        <!-- Base fields -->
+        <div id="base-fields">
+            <input type="text" name="fullname" placeholder="Full Name" required>
+            <input type="email" name="email" placeholder="Email Address" required>
+            <input type="password" name="password" placeholder="Password" required>
+        </div>
+
+        <!-- Placeholder for additional fields -->
+        <div id="additional-fields"></div>
+
+        <!-- Hidden field to send role -->
+        <input type="hidden" name="role" id="role-input">
+
+        <button type="submit">Sign Up</button>
+    </form>
+</div>
+
+<script>
+    // Reference the elements in the HTML
+    const titleElement = document.getElementById('signup-role-text');
+    const roleSpecificText = document.getElementById('role-specific-text');
+    const additionalFields = document.getElementById('additional-fields');
+    const roleInput = document.getElementById('role-input');
+
+    // Get the "role" parameter from the URL
+    const params = new URLSearchParams(window.location.search);
+    const role = params.get('role');
+
+    // Map roles to corresponding text and fields
+    const roleText = {
+        boss: "Sign Up as a Boss",
+        manager: "Sign Up as a Manager",
+        employee: "Sign Up as an Employee"
+    };
+
+    const additionalFieldsConfig = {
+        boss: `
+            <input type="password" name="confirmPassword" placeholder="Confirm Password" required>
+            <input type="text" name="companyName" placeholder="Company Name" required>
+        `,
+        manager: `
+            <input type="password" name="confirmPassword" placeholder="Confirm Password" required>
+            <input type="text" name="companyCode" placeholder="Company Code" required>
+        `,
+        employee: `
+            <input type="password" name="confirmPassword" placeholder="Confirm Password" required>
+            <input type="text" name="companyCode" placeholder="Company Code" required>
+        `
+    };
+
+    // Update the page content based on the role
+    if (role && roleText[role]) {
+        console.log('Selected role:', role); // Debugging log
+        titleElement.innerText = roleText[role];
+        roleSpecificText.innerText = `You are registering as ${role}. Please fill out the form below.`;
+
+        // Update additional fields dynamically
+        additionalFields.innerHTML = additionalFieldsConfig[role];
+
+        // Set the hidden role input value
+        roleInput.value = role;
+    } else {
+        console.log('No valid role found or roleText missing for:', role); // Debugging log
+        // Default to generic sign-up
+        titleElement.innerText = "Sign Up";
+        roleSpecificText.innerText = "Please fill out the form below.";
+        additionalFields.innerHTML = ""; // Reset additional fields
+    }
+
+    // Reference the form element
+    const signupForm = document.getElementById('signup-form');
+
+    // Function to display messages to the user
+    function displayMessage(message, isError = false) {
+        // Remove existing message if any
+        let existingMessage = document.getElementById('form-message');
+        if (existingMessage) {
+            existingMessage.remove();
+        }
+
+        // Create a new message element
+        const messageElement = document.createElement('div');
+        messageElement.id = 'form-message';
+        messageElement.textContent = message;
+        messageElement.style.marginTop = '10px';
+        messageElement.style.padding = '10px';
+        messageElement.style.borderRadius = '5px';
+        messageElement.style.color = isError ? '#721c24' : '#155724';
+        messageElement.style.backgroundColor = isError ? '#f8d7da' : '#d4edda';
+        messageElement.style.border = isError ? '1px solid #f5c6cb' : '1px solid #c3e6cb';
+
+        // Insert the message after the form
+        signupForm.parentNode.insertBefore(messageElement, signupForm.nextSibling);
+    }
+
+    // Event listener for form submission
+    signupForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+
+        const formData = new FormData(signupForm);
+        const data = {};
+        formData.forEach((value, key) => {
+            data[key] = value;
+        });
+
+        console.log("Data sent to API:", data); // Debugging
+
+        const submitButton = signupForm.querySelector('button[type="submit"]');
+        submitButton.disabled = true;
+        submitButton.textContent = 'Registering...';
+
+        localStorage.setItem("email", data.email);
+        localStorage.setItem("role", data.role);
+        try {
+            const response = await fetch('/api/signup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            const result = await response.json();
+            console.log("Response from API:", result); // Debugging
+
+            if (response.ok && result.data) {
+                displayMessage(result.message || 'Sign-up successful! Redirecting...', false);
+                window.location.href = `/dashboard.html?role=${encodeURIComponent(result.data.role)}`;
+            } else {
+                displayMessage(result.message || 'Error during registration.', true);
+            }
+        } catch (error) {
+            console.error('Error during sign-up:', error);
+            displayMessage('Connection failed. Please try again later.', true);
+        } finally {
+            submitButton.disabled = false;
+            submitButton.textContent = 'Sign Up';
+        }
+    });
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Dashboard Boss</title>
+    <!-- CSS principal -->
+    <link rel="stylesheet" href="styles1.css" />
+    <!-- Font Awesome -->
+    <link
+            rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <!-- Font opțional -->
+    <link
+            href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&display=swap"
+            rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styleDashboard.css" />
+</head>
+<body>
+<!-- Pop-Up pentru Adăugare Task (Managers) -->
+<!-- ... (restul pop-up-urilor) ... -->
+
+<header>
+    <nav class="navbar">
+        <div class="brand">
+            <button class="toggle-btn" onclick="toggleSidebar()">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+            <i class="fa-solid fa-bolt"></i> Boss Dashboard
+        </div>
+        <ul>
+            <li><a href="#" onclick="keepRoleUp()">Home</a></li>
+            <li><a href="#" onclick="loadPage('my_account')">My Account</a></li>
+            <li><a href="/api/logout">Logout</a></li>
+        </ul>
+    </nav>
+</header>
+<div class="wrapper">
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+        <h2>Menu</h2>
+        <ul>
+            <li><a href="#" onclick="loadPage('managers')">Managers</a></li>
+            <li><a href="#" onclick="loadPage('employee')">Employees</a></li>
+            <li><a href="#" onclick="loadPage('create_users')">Create Users</a></li>
+            <li><a href="#" onclick="loadPage('boss_tasks')">Your Tasks</a></li>
+        </ul>
+    </aside>
+    <!-- CONȚINUT PRINCIPAL -->
+    <main id="main-content" class="main-content">
+        <!-- Default content for photo and company name -->
+        <section id="default-section" class="hero">
+            <h1 class="company-name">Compania: Nume necunoscut</h1>
+        </section>
+        <!-- Div pentru pagini generale -->
+        <div id="content-frame" style="width:100%; height:calc(100vh - 60px); display:none;"></div>
+        <!-- Dynamic Managers List -->
+        <section id="managers-list" style="display:none; padding: 20px;">
+            <h2>Managers</h2>
+            <div id="managers-container" class="managers-grid">
+                <!-- Manager cards will be added dynamically here -->
+            </div>
+        </section>
+        <!-- Div for Manager Details -->
+        <div id="manager-content-frame" style="width:100%; height:calc(100vh - 60px); display:none;"></div>
+    </main>
+</div>
+<script src="script.js"></script>
+</body>
+</html>

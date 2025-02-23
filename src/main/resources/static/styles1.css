@@ -1,0 +1,221 @@
+/* Reset de bază */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow-x: hidden; /* să nu apară scrollbar orizontal */
+}
+
+body {
+    font-family: 'Open Sans', sans-serif;
+    color: #333;
+    padding-top: 60px; /* spațiu pentru navbarul fix */
+}
+
+/* NAVBAR */
+.navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 60px;
+    background-color: #f2f2f2;
+    border-bottom: 1px solid #ddd;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    z-index: 9999;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #333;
+}
+
+/* Buton hamburger */
+.toggle-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.5rem;
+    margin-right: 8px;
+    color: #333;
+}
+
+.brand i {
+    margin-right: 8px;
+    color: #f7b500;
+}
+
+.navbar ul {
+    list-style: none;
+    display: flex;
+}
+.navbar ul li {
+    margin-left: 20px;
+}
+.navbar ul li a {
+    text-decoration: none;
+    color: #333;
+    font-weight: 500;
+    transition: color 0.3s ease;
+}
+.navbar ul li a:hover {
+    color: #f7b500;
+}
+
+/* WRAPPER => SIDEBAR + MAIN CONTENT */
+.wrapper {
+    display: flex;
+}
+
+/* SIDEBAR */
+.sidebar {
+    position: fixed;
+    top: 60px;
+    left: 0;
+    width: 220px;
+    height: calc(100vh - 60px);
+    background-color: #ddd;
+    padding: 20px;
+    overflow-y: auto;
+    transition: width 0.3s ease;
+    display: flex;
+    flex-direction: column; /* Asigură o structură verticală pentru conținut */
+}
+
+
+.sidebar h2 {
+    margin-bottom: 10px;
+}
+.sidebar ul {
+    list-style: none;
+    margin-top: 10px;
+}
+.sidebar ul li {
+    margin-bottom: 10px;
+}
+.sidebar ul li a {
+    text-decoration: none;
+    color: #333;
+    font-weight: 500;
+}
+.sidebar ul li a:hover {
+    color: #777;
+}
+
+/* Când e "collapsed", sidebar-ul își reduce lățimea la 60px */
+.sidebar.collapsed {
+    width: 60px;
+    padding: 20px 0; /* Adaugă spațiu interior minim */
+    overflow: hidden;
+}
+
+/* MAIN CONTENT */
+.main-content {
+    flex: 1;
+    margin-left: 220px; /* Începe după lățimea sidebar-ului */
+    padding: 20px;
+    transition: margin-left 0.3s ease; /* Ajustare lină pentru colapsare */
+}
+
+/* Ajustare când sidebar-ul este colapsat */
+.main-content.collapsed {
+    margin-left: 60px; /* Ajustare pentru sidebar colapsat */
+}
+
+/* HERO (imagine full ecran - sidebar) */
+.hero {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    /* Elimină margin-left și width */
+    min-height: calc(100vh - 60px); /* Înălțimea totală minus navbar */
+    background: url("1c0708a88937e5970cf48c40e7db6a7f.jpg") no-repeat center center;
+    background-size: cover;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+
+/* Ajustare pentru sidebar colapsat */
+.hero.collapsed {
+    margin-left: 60px;
+    width: calc(100% - 60px);
+}
+
+/* CARDS */
+.cards {
+    display: flex;
+    gap: 20px;
+}
+
+.card {
+    background-color: rgba(255, 255, 255, 0.85);
+    border-radius: 8px;
+    box-shadow: 0 0 8px rgba(0,0,0,0.1);
+    text-align: center;
+    padding: 30px;
+    width: 220px;
+}
+
+/* Icon + titlu + text card */
+.card .icon {
+    font-size: 2.5rem;
+    color: #555;
+    margin-bottom: 15px;
+}
+.card h2 {
+    margin-bottom: 10px;
+    font-size: 1.3rem;
+}
+.card p {
+    line-height: 1.5;
+    font-size: 0.95rem;
+}
+.managers-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.manager-card {
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    text-align: left;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.manager-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.manager-card a {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    height: 100%;
+}
+.task-item.selected {
+    border: 2px solid #007bff;
+    background-color: #f0f8ff;
+}
+
